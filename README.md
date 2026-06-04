@@ -1,5 +1,9 @@
 # AgentPlane
 
+<p align="center">
+  <img src="docs/agentplane-fleet.gif" alt="AgentPlane Fleet Animation" width="400"/>
+</p>
+
 **A lightweight control plane for managing fleets of AI agents in production.**
 
 AgentPlane is a single Go binary that provides registry, scheduling, policy enforcement, lifecycle management, observability, cost control, and inter-agent communication for AI agent fleets. Think "Nomad for agents" — GitOps-friendly YAML manifests, protocol-native MCP/A2A integration, and a storage layer that scales from SQLite on a laptop to PostgreSQL in production without architecture changes.
