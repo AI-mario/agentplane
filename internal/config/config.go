@@ -50,6 +50,13 @@ type Config struct {
 
 	// Log level
 	LogLevel string `yaml:"logLevel"`
+
+	// Gemini / Vertex AI adapter
+	GeminiAPIKey             string `yaml:"geminiApiKey"`
+	GeminiProjectID          string `yaml:"geminiProjectId"`
+	GeminiLocation           string `yaml:"geminiLocation"`
+	GeminiModel              string `yaml:"geminiModel"`
+	GeminiServiceAccountJSON string `yaml:"geminiServiceAccountJson"`
 }
 
 // DefaultConfig returns a Config with spec-mandated defaults.
@@ -189,6 +196,23 @@ func applyEnv(cfg *Config) {
 		if f, err := strconv.ParseFloat(v, 64); err == nil {
 			cfg.SchedulerLoadWeight = f
 		}
+	}
+
+	// Gemini / Vertex AI
+	if v := os.Getenv("AGENTPLANE_GEMINI_API_KEY"); v != "" {
+		cfg.GeminiAPIKey = v
+	}
+	if v := os.Getenv("AGENTPLANE_GEMINI_PROJECT_ID"); v != "" {
+		cfg.GeminiProjectID = v
+	}
+	if v := os.Getenv("AGENTPLANE_GEMINI_LOCATION"); v != "" {
+		cfg.GeminiLocation = v
+	}
+	if v := os.Getenv("AGENTPLANE_GEMINI_MODEL"); v != "" {
+		cfg.GeminiModel = v
+	}
+	if v := os.Getenv("AGENTPLANE_GEMINI_SERVICE_ACCOUNT_JSON"); v != "" {
+		cfg.GeminiServiceAccountJSON = v
 	}
 }
 
