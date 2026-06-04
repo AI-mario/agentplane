@@ -1,0 +1,32 @@
+# Binaries
+bin/
+agentplane
+apctl
+*.exe
+
+# Kiro
+.kiro/
+
+# IDE
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dependencies
+node_modules/
+
+# Dashboard build output (regenerated via make dashboard)
+web/dashboard/dist/
+web/dashboard/node_modules/
+
+# Database files
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Environment
+.env
+.env.local

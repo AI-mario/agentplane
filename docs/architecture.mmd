@@ -1,0 +1,91 @@
+graph TB
+    subgraph External["🌐 External Interfaces"]
+        REST["REST API<br/>:8080"]
+        MCP["MCP Interface<br/>:8081"]
+        A2A_EXT["A2A Interface<br/>:8082"]
+        CLI["apctl CLI"]
+        DASH["React Dashboard"]
+    end
+
+    subgraph Gateway["🔐 API Gateway"]
+        AUTH["Auth Provider<br/>API Key + OAuth2"]
+        ROUTER["Chi Router"]
+    end
+
+    subgraph Core["⚙️ Core Services"]
+        REG["Agent Registry"]
+        SCH["Scheduler<br/>Weighted Scoring"]
+        POL["Policy Engine<br/>CEL Rules"]
+        LM["Lifecycle Manager<br/>Canary + Rollback"]
+        OBS["Observability<br/>OpenTelemetry"]
+        COST["Cost Controller<br/>Budget Enforcement"]
+        BUS["Communication Bus<br/>A2A Routing + DLQ"]
+        SLO_SVC["SLO Manager<br/>Compliance Monitoring"]
+        SM["Safety Mesh<br/>Kill Switch + CB"]
+        REC["Reconciliation<br/>GitOps Loop"]
+    end
+
+    subgraph Storage["💾 Data Layer"]
+        SQLITE["SQLite<br/>(Default)"]
+        PG["PostgreSQL<br/>(Production)"]
+    end
+
+    subgraph Fleet["🤖 Agent Fleet"]
+        A1["Claude Agent"]
+        A2["Kiro Agent"]
+        A3["Bedrock Agent"]
+        A4["Custom Agent"]
+    end
+
+    REST --> AUTH
+    MCP --> AUTH
+    A2A_EXT --> AUTH
+    CLI --> REST
+    DASH --> REST
+    AUTH --> ROUTER
+
+    ROUTER --> REG
+    ROUTER --> SCH
+    ROUTER --> POL
+    ROUTER --> LM
+    ROUTER --> OBS
+    ROUTER --> COST
+
+    SCH -->|"evaluate policy"| POL
+    SCH -->|"find agents"| REG
+    SLO_SVC -->|"get metrics"| OBS
+    SLO_SVC -->|"reduce traffic"| SCH
+    SLO_SVC -->|"trigger rollback"| LM
+    SM -->|"exclude agent"| SCH
+    SM -->|"kill switch"| LM
+    BUS -->|"access control"| POL
+    REC -->|"deploy"| LM
+    REC -->|"register"| REG
+
+    REG --> SQLITE
+    REG --> PG
+    SCH --> SQLITE
+    SCH --> PG
+    POL --> SQLITE
+    POL --> PG
+    COST --> SQLITE
+    COST --> PG
+    OBS --> SQLITE
+    OBS --> PG
+
+    BUS -->|"A2A"| A1
+    BUS -->|"A2A"| A2
+    BUS -->|"A2A"| A3
+    BUS -->|"A2A"| A4
+
+    classDef external fill:#e1f5fe,stroke:#0288d1,stroke-width:2px
+    classDef gateway fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef core fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    classDef storage fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef fleet fill:#fce4ec,stroke:#c62828,stroke-width:2px
+
+    class REST,MCP,A2A_EXT,CLI,DASH external
+    class AUTH,ROUTER gateway
+    class REG,SCH,POL,LM,OBS,COST,BUS,SLO_SVC,SM,REC core
+    class SQLITE,PG storage
+    class A1,A2,A3,A4 fleet

@@ -1,0 +1,31 @@
+# 2026/06/04 10:19:57.325242 [TestProperty11_PolicyInheritanceOverride] [rapid] draw teamID: "team-1"
+# 2026/06/04 10:19:57.325246 [TestProperty11_PolicyInheritanceOverride] [rapid] draw orgLimit: 10
+# 2026/06/04 10:19:57.325248 [TestProperty11_PolicyInheritanceOverride] [rapid] draw teamLimit: 11.00006103515625
+# 2026/06/04 10:19:57.325249 [TestProperty11_PolicyInheritanceOverride] [rapid] draw requestCost: 11.00006103515625
+# 2026/06/04 10:19:57.325253 [TestProperty11_PolicyInheritanceOverride] expected allow (team override): cost 11.00 <= teamLimit 11.00, but org limit was 10.00. Reason: allow condition not met for rule team-r1 (type: budget)
+# 
+v0.4.8#10545062523770245846
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x38e38e38e38e4
+0x0
+0x0
+0xe
+0x800000000
+0x0
+0x0
+0x1f2b5a0e61c3a6
+0x0
+0x0
+0x0
+0x0

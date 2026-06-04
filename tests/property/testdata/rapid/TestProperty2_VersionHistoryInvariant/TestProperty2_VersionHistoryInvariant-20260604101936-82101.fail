@@ -1,0 +1,14 @@
+# 2026/06/04 10:19:36.141217 [TestProperty2_VersionHistoryInvariant] [rapid] draw numVersions: 51
+# 2026/06/04 10:19:36.141224 [TestProperty2_VersionHistoryInvariant] [rapid] draw baseName: "0"
+# 2026/06/04 10:19:36.141658 [TestProperty2_VersionHistoryInvariant] most recent version: got "0.0.0", want "0.5.0"
+# 
+v0.4.8#14869115166941501567
+0x0
+0xe3e05a098777c
+0x32
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0

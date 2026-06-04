@@ -1,0 +1,12 @@
+# 2026/06/04 11:56:15.411868 [TestProperty51_AuthenticationEnforcement_InvalidAPIKey] [rapid] draw path: "/api/v1/missions"
+# 2026/06/04 11:56:15.411873 [TestProperty51_AuthenticationEnforcement_InvalidAPIKey] [rapid] draw badKey: "-"
+# 2026/06/04 11:56:15.411886 [TestProperty51_AuthenticationEnforcement_InvalidAPIKey] invalid API key "-": expected 401, got 405 for path /api/v1/missions
+# 
+v0.4.8#13332496672657495424
+0x38e38e38e38e4
+0x2
+0x0
+0x0
+0x0
+0x0
+0x0

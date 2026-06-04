@@ -1,0 +1,19 @@
+# 2026/06/04 10:21:34.521696 [TestProperty2_VersionHistoryInvariant] [rapid] draw numVersions: 1
+# 2026/06/04 10:21:34.521702 [TestProperty2_VersionHistoryInvariant] [rapid] draw baseName: "0\\"
+# 2026/06/04 10:21:34.521704 [TestProperty2_VersionHistoryInvariant] register initial: manifest validation failed: name: name must be 1-253 lowercase alphanumeric characters or hyphens, starting with alphanumeric (format)
+# 
+v0.4.8#8679894253013184649
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x1
+0x0
+0x0
+0x9867f1f40f739
+0xb
+0x0
