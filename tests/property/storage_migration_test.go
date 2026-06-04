@@ -44,7 +44,7 @@ func genAgentEntryForMigration(idx int) *rapid.Generator[*domain.AgentEntry] {
 			rapid.IntRange(0, 20).Draw(t, "minor"),
 			rapid.IntRange(0, 50).Draw(t, "patch"))
 		runtime := rapid.SampledFrom([]domain.RuntimeType{
-			domain.RuntimeClaude, domain.RuntimeKiro, domain.RuntimeBedrock, domain.RuntimeCustom,
+			domain.RuntimeClaude, domain.RuntimeKiro, domain.RuntimeBedrock, domain.RuntimeGemini, domain.RuntimeCustom,
 		}).Draw(t, "runtime")
 
 		numCaps := rapid.IntRange(1, 4).Draw(t, "numCaps")

@@ -32,6 +32,7 @@ var validRuntimes = map[domain.RuntimeType]bool{
 	domain.RuntimeClaude:  true,
 	domain.RuntimeKiro:    true,
 	domain.RuntimeBedrock: true,
+	domain.RuntimeGemini:  true,
 	domain.RuntimeCustom:  true,
 }
 
@@ -205,7 +206,7 @@ func validateManifestFields(m domain.AgentManifest) error {
 		violations = append(violations, domain.ValidationViolation{
 			Field:   "runtime",
 			Type:    domain.ViolationEnum,
-			Message: fmt.Sprintf("runtime must be one of: claude, kiro, bedrock, custom; got %q", m.RuntimeType),
+			Message: fmt.Sprintf("runtime must be one of: claude, kiro, bedrock, gemini, custom; got %q", m.RuntimeType),
 		})
 	}
 

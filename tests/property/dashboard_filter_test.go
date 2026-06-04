@@ -118,6 +118,7 @@ var dashboardRuntimes = []domain.RuntimeType{
 	domain.RuntimeClaude,
 	domain.RuntimeKiro,
 	domain.RuntimeBedrock,
+	domain.RuntimeGemini,
 	domain.RuntimeCustom,
 }
 

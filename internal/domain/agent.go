@@ -9,6 +9,7 @@ const (
 	RuntimeClaude  RuntimeType = "claude"
 	RuntimeKiro    RuntimeType = "kiro"
 	RuntimeBedrock RuntimeType = "bedrock"
+	RuntimeGemini  RuntimeType = "gemini"
 	RuntimeCustom  RuntimeType = "custom"
 )
 

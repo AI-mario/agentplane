@@ -73,6 +73,7 @@ var validRuntimes = map[RuntimeType]bool{
 	RuntimeClaude:  true,
 	RuntimeKiro:    true,
 	RuntimeBedrock: true,
+	RuntimeGemini:  true,
 	RuntimeCustom:  true,
 }
 
@@ -191,7 +192,7 @@ func validateRawManifest(raw *rawManifest) []ValidationViolation {
 		violations = append(violations, ValidationViolation{
 			Field:   "spec.runtime",
 			Type:    ViolationEnum,
-			Message: fmt.Sprintf("runtime must be one of: claude, kiro, bedrock, custom; got %q", raw.Spec.Runtime),
+			Message: fmt.Sprintf("runtime must be one of: claude, kiro, bedrock, gemini, custom; got %q", raw.Spec.Runtime),
 		})
 	}
 

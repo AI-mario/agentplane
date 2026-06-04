@@ -69,6 +69,7 @@ func genRuntimeTypeValue() *rapid.Generator[domain.RuntimeType] {
 		domain.RuntimeClaude,
 		domain.RuntimeKiro,
 		domain.RuntimeBedrock,
+		domain.RuntimeGemini,
 		domain.RuntimeCustom,
 	})
 }
