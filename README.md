@@ -1,7 +1,7 @@
 # AgentPlane
 
 <p align="center">
-  <img src="docs/agentplane-fleet.gif" alt="AgentPlane Fleet Animation" width="400"/>
+  <img src="docs/agentplane-fleet.gif" alt="AgentPlane Fleet Animation" width="640"/>
 </p>
 
 **A lightweight control plane for managing fleets of AI agents in production.**

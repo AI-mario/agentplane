@@ -1,294 +1,217 @@
 #!/usr/bin/env python3
-"""Generate an animated GIF showing an orchestrated agent ecosystem:
-- A fenced pasture with emoji-style animals (agents) moving around
-- A farm building (registry/scheduler)
-- A factory building (policy engine/lifecycle)
-- Connecting paths showing the orchestrated ecosystem
-"""
+"""Generate an animated GIF showing AgentPlane as a control tower with orbiting agents,
+pulsing connections, and a mini live dashboard. Communicates the concept instantly."""
 
 import math
-import random
 from PIL import Image, ImageDraw, ImageFont
 
-WIDTH, HEIGHT = 600, 400
-FRAMES = 60
-BG_COLOR = (135, 206, 235)  # sky blue
+WIDTH, HEIGHT = 640, 360
+FRAMES = 80
+BG_COLOR = (18, 22, 36)  # dark navy
+CENTER_X, CENTER_Y = 260, 180
 
-# Try to get a font that supports rendering
+# Fonts
 try:
-    font_large = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 14)
-    font_small = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 10)
-    font_title = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 18)
+    font_title = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 20)
+    font_label = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 11)
+    font_small = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 9)
+    font_tagline = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 13)
 except:
-    font_large = ImageFont.load_default()
-    font_small = ImageFont.load_default()
     font_title = ImageFont.load_default()
+    font_label = ImageFont.load_default()
+    font_small = ImageFont.load_default()
+    font_tagline = ImageFont.load_default()
 
-
-# Animals with distinct shapes
-ANIMALS = [
-    {"type": "sheep", "x": 220, "y": 220, "dx": 0.8, "dy": 0.5, "color": (240, 240, 240), "outline": (100, 100, 100)},
-    {"type": "cow", "x": 310, "y": 260, "dx": -0.6, "dy": 0.7, "color": (50, 50, 50), "outline": (20, 20, 20)},
-    {"type": "chicken", "x": 270, "y": 180, "dx": 1.2, "dy": -0.4, "color": (255, 200, 50), "outline": (200, 100, 0)},
-    {"type": "pig", "x": 350, "y": 300, "dx": -0.5, "dy": -0.8, "color": (255, 180, 180), "outline": (200, 100, 100)},
-    {"type": "horse", "x": 200, "y": 300, "dx": 0.9, "dy": -0.3, "color": (139, 90, 43), "outline": (80, 50, 20)},
-    {"type": "duck", "x": 380, "y": 200, "dx": -1.0, "dy": 0.6, "color": (255, 255, 200), "outline": (200, 150, 0)},
+# Agents orbiting
+AGENTS = [
+    {"name": "Claude", "color": (210, 140, 60), "orbit": 110, "speed": 0.025, "offset": 0},
+    {"name": "Kiro", "color": (100, 180, 255), "orbit": 110, "speed": 0.025, "offset": math.pi * 0.5},
+    {"name": "Bedrock", "color": (255, 100, 130), "orbit": 110, "speed": 0.025, "offset": math.pi},
+    {"name": "Custom", "color": (130, 220, 130), "orbit": 110, "speed": 0.025, "offset": math.pi * 1.5},
 ]
 
-# Pasture bounds
-PASTURE_LEFT = 160
-PASTURE_TOP = 150
-PASTURE_RIGHT = 450
-PASTURE_BOTTOM = 360
+
+def lerp_color(c1, c2, t):
+    return tuple(int(a + (b - a) * t) for a, b in zip(c1, c2))
 
 
-def draw_sky_and_ground(draw):
-    """Draw sky gradient and green ground."""
-    # Sky (already bg color)
-    # Ground
-    draw.rectangle([0, 120, WIDTH, HEIGHT], fill=(100, 180, 60))
-    # Darker grass patches
-    random.seed(42)
-    for _ in range(50):
-        gx = random.randint(0, WIDTH)
-        gy = random.randint(130, HEIGHT)
-        draw.ellipse([gx, gy, gx + random.randint(5, 15), gy + random.randint(3, 8)], fill=(80, 160, 50))
+def draw_starfield(draw, frame):
+    """Subtle animated starfield background."""
+    import random
+    random.seed(123)
+    for _ in range(60):
+        sx = random.randint(0, WIDTH)
+        sy = random.randint(0, HEIGHT)
+        brightness = random.randint(40, 100) + int(math.sin(frame * 0.1 + sx) * 20)
+        brightness = max(30, min(120, brightness))
+        draw.point((sx, sy), fill=(brightness, brightness, brightness + 20))
 
 
-def draw_farm(draw, frame):
-    """Draw the farm building (left side) — represents Registry/Scheduler."""
-    # Barn body
-    draw.rectangle([20, 80, 120, 145], fill=(180, 50, 50), outline=(100, 30, 30), width=2)
-    # Barn roof
-    draw.polygon([(15, 80), (70, 45), (125, 80)], fill=(120, 30, 30), outline=(80, 20, 20))
-    # Door
-    draw.rectangle([55, 110, 85, 145], fill=(80, 40, 20))
-    # Window
-    draw.rectangle([30, 90, 50, 108], fill=(200, 220, 255), outline=(80, 40, 20))
-    # Hay bale indicator (pulsing)
-    pulse = abs(math.sin(frame * 0.1)) * 0.3 + 0.7
-    hay_color = (int(220 * pulse), int(180 * pulse), int(50 * pulse))
-    draw.ellipse([95, 125, 115, 143], fill=hay_color, outline=(150, 120, 30))
-    # Label
-    draw.text((25, 148), "Registry", fill=(50, 50, 50), font=font_small)
-    draw.text((25, 160), "& Scheduler", fill=(50, 50, 50), font=font_small)
+def draw_orbit_rings(draw):
+    """Draw subtle orbit path."""
+    for i in range(4):
+        # Faint dashed orbit
+        for angle_deg in range(0, 360, 8):
+            a = math.radians(angle_deg)
+            x = CENTER_X + math.cos(a) * AGENTS[0]["orbit"]
+            y = CENTER_Y + math.sin(a) * AGENTS[0]["orbit"] * 0.55  # elliptical
+            if angle_deg % 16 < 8:
+                draw.ellipse([x - 1, y - 1, x + 1, y + 1], fill=(50, 60, 80))
 
 
-def draw_factory(draw, frame):
-    """Draw the factory building (right side) — represents Policy/Lifecycle."""
-    # Factory body
-    draw.rectangle([480, 70, 580, 145], fill=(160, 160, 170), outline=(100, 100, 110), width=2)
-    # Chimney
-    draw.rectangle([540, 40, 560, 75], fill=(120, 120, 130), outline=(80, 80, 90))
-    # Smoke (animated)
-    for i in range(3):
-        sx = 550 + math.sin(frame * 0.15 + i) * 8
-        sy = 35 - i * 12 - (frame % 20) * 0.3
-        size = 6 + i * 3
-        alpha = max(0, 200 - i * 60)
-        draw.ellipse([sx - size, sy - size, sx + size, sy + size], fill=(220, 220, 220))
-    # Windows
-    for wx in [495, 520, 545]:
-        draw.rectangle([wx, 85, wx + 15, 100], fill=(200, 220, 255), outline=(80, 80, 90))
-    # Door
-    draw.rectangle([515, 115, 545, 145], fill=(80, 80, 90))
-    # Gear icon (rotating)
-    cx, cy = 530, 105
-    angle = frame * 0.1
+def draw_control_tower(draw, frame):
+    """Draw central hexagonal control tower with pulsing glow."""
+    cx, cy = CENTER_X, CENTER_Y
+    # Glow pulse
+    pulse = 0.7 + math.sin(frame * 0.08) * 0.3
+    glow_radius = int(38 * pulse)
+    for r in range(glow_radius, 25, -2):
+        alpha = int((1 - (r - 25) / (glow_radius - 25)) * 40)
+        color = (30 + alpha, 80 + alpha, 180 + min(alpha, 75))
+        draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=color)
+
+    # Hexagon body
+    hex_r = 28
+    points = []
     for i in range(6):
-        a = angle + i * math.pi / 3
-        x1 = cx + math.cos(a) * 4
-        y1 = cy + math.sin(a) * 4
-        draw.ellipse([x1 - 2, y1 - 2, x1 + 2, y1 + 2], fill=(60, 60, 70))
+        angle = math.pi / 6 + i * math.pi / 3
+        points.append((cx + math.cos(angle) * hex_r, cy + math.sin(angle) * hex_r))
+    draw.polygon(points, fill=(40, 70, 140), outline=(100, 160, 255))
+
+    # Inner circle
+    draw.ellipse([cx - 12, cy - 12, cx + 12, cy + 12], fill=(20, 40, 100), outline=(80, 140, 255))
+
+    # Rotating inner indicator
+    ind_angle = frame * 0.1
+    ix = cx + math.cos(ind_angle) * 7
+    iy = cy + math.sin(ind_angle) * 7
+    draw.ellipse([ix - 3, iy - 3, ix + 3, iy + 3], fill=(100, 200, 255))
+
     # Label
-    draw.text((485, 148), "Policy Engine", fill=(50, 50, 50), font=font_small)
-    draw.text((485, 160), "& Lifecycle", fill=(50, 50, 50), font=font_small)
+    draw.text((cx - 30, cy + 32), "AgentPlane", fill=(180, 200, 255), font=font_label)
 
 
-def draw_fence(draw):
-    """Draw wooden fence around pasture."""
-    # Horizontal rails
-    for y in [PASTURE_TOP, PASTURE_TOP + 15, PASTURE_BOTTOM - 15, PASTURE_BOTTOM]:
-        draw.line([(PASTURE_LEFT, y), (PASTURE_RIGHT, y)], fill=(139, 90, 43), width=3)
-    # Vertical rails
-    for x in [PASTURE_LEFT, PASTURE_RIGHT]:
-        draw.line([(x, PASTURE_TOP), (x, PASTURE_BOTTOM)], fill=(139, 90, 43), width=3)
-    # Fence posts
-    for x in range(PASTURE_LEFT, PASTURE_RIGHT + 1, 25):
-        draw.rectangle([x - 2, PASTURE_TOP - 5, x + 2, PASTURE_TOP + 5], fill=(100, 60, 20))
-        draw.rectangle([x - 2, PASTURE_BOTTOM - 5, x + 2, PASTURE_BOTTOM + 5], fill=(100, 60, 20))
-    for y in range(PASTURE_TOP, PASTURE_BOTTOM + 1, 25):
-        draw.rectangle([PASTURE_LEFT - 5, y - 2, PASTURE_LEFT + 5, y + 2], fill=(100, 60, 20))
-        draw.rectangle([PASTURE_RIGHT - 5, y - 2, PASTURE_RIGHT + 5, y + 2], fill=(100, 60, 20))
+def draw_agent_node(draw, agent, frame):
+    """Draw orbiting agent with connection line."""
+    angle = frame * agent["speed"] + agent["offset"]
+    x = CENTER_X + math.cos(angle) * agent["orbit"]
+    y = CENTER_Y + math.sin(angle) * agent["orbit"] * 0.55  # elliptical orbit
+
+    # Connection line (pulsing)
+    pulse_pos = (frame * 0.05 + agent["offset"]) % 1.0
+    for t in [0.3, 0.5, 0.7]:
+        actual_t = (t + pulse_pos) % 1.0
+        px = CENTER_X + (x - CENTER_X) * actual_t
+        py = CENTER_Y + (y - CENTER_Y) * actual_t
+        dot_size = 2
+        brightness = int(255 * (1 - abs(actual_t - 0.5) * 2))
+        dot_color = tuple(int(c * brightness / 255) for c in agent["color"])
+        draw.ellipse([px - dot_size, py - dot_size, px + dot_size, py + dot_size], fill=dot_color)
+
+    # Faint connection line
+    draw.line([(CENTER_X, CENTER_Y), (x, y)], fill=(40, 50, 70), width=1)
+
+    # Agent node glow
+    for r in range(14, 8, -1):
+        alpha_factor = (14 - r) / 6
+        glow = tuple(int(c * alpha_factor * 0.4) for c in agent["color"])
+        draw.ellipse([x - r, y - r, x + r, y + r], fill=glow)
+
+    # Agent node body
+    draw.ellipse([x - 8, y - 8, x + 8, y + 8], fill=agent["color"], outline=(255, 255, 255))
+
+    # Agent label
+    label_x = x - len(agent["name"]) * 3
+    label_y = y + 12
+    draw.text((label_x, label_y), agent["name"], fill=agent["color"], font=font_small)
+
+    return x, y
 
 
-def draw_paths(draw, frame):
-    """Draw animated connecting paths between buildings and pasture."""
-    # Path from farm to pasture (dashed, animated)
-    dash_offset = frame % 10
-    for i in range(0, 40, 10):
-        x = 120 + i + dash_offset
-        if x < PASTURE_LEFT:
-            draw.rectangle([x, 148, x + 5, 152], fill=(180, 150, 100))
+def draw_mini_dashboard(draw, frame):
+    """Draw animated mini dashboard on the right side."""
+    dx, dy = 470, 40
+    panel_w, panel_h = 150, 280
 
-    # Path from factory to pasture
-    for i in range(0, 30, 10):
-        x = PASTURE_RIGHT + i + 5 + dash_offset
-        if x < 480:
-            draw.rectangle([x, 148, x + 5, 152], fill=(180, 150, 100))
+    # Panel background
+    draw.rounded_rectangle([dx, dy, dx + panel_w, dy + panel_h], radius=8, fill=(25, 30, 50), outline=(60, 80, 120))
 
-    # Signal dots (flowing from farm to pasture)
-    dot_x = 120 + ((frame * 3) % (PASTURE_LEFT - 120))
-    draw.ellipse([dot_x - 3, 147, dot_x + 3, 153], fill=(50, 200, 50))
+    # Header
+    draw.text((dx + 15, dy + 8), "Live Status", fill=(150, 180, 220), font=font_label)
+    draw.line([(dx + 10, dy + 25), (dx + panel_w - 10, dy + 25)], fill=(50, 60, 90))
 
-    # Signal dots (flowing from factory to pasture)
-    dot_x2 = PASTURE_RIGHT + 5 + ((frame * 2.5) % (480 - PASTURE_RIGHT - 5))
-    draw.ellipse([dot_x2 - 3, 147, dot_x2 + 3, 153], fill=(50, 100, 200))
+    # Health indicator
+    draw.text((dx + 12, dy + 32), "Health", fill=(120, 140, 160), font=font_small)
+    health_color = (50, 220, 100) if frame % 60 < 55 else (220, 180, 50)
+    draw.ellipse([dx + 120, dy + 33, dx + 130, dy + 43], fill=health_color)
 
+    # Active missions counter (animated)
+    missions = 12 + int(math.sin(frame * 0.08) * 3)
+    draw.text((dx + 12, dy + 50), "Missions", fill=(120, 140, 160), font=font_small)
+    draw.text((dx + 110, dy + 50), str(missions), fill=(100, 200, 255), font=font_label)
 
-def draw_animal(draw, animal, frame):
-    """Draw a schematic emoji-style animal."""
-    x, y = int(animal["x"]), int(animal["y"])
-    color = animal["color"]
-    outline = animal["outline"]
-    t = animal["type"]
+    # Agents online
+    draw.text((dx + 12, dy + 68), "Agents", fill=(120, 140, 160), font=font_small)
+    draw.text((dx + 110, dy + 68), "4/4", fill=(50, 220, 100), font=font_label)
 
-    # Body bounce
-    bounce = math.sin(frame * 0.3 + hash(t)) * 1.5
+    # Cost bars (animated)
+    draw.text((dx + 12, dy + 92), "Cost / Budget", fill=(120, 140, 160), font=font_small)
+    teams = [("Platform", 0.6), ("ML Ops", 0.35), ("Data", 0.8)]
+    for i, (team, base_pct) in enumerate(teams):
+        by = dy + 110 + i * 28
+        pct = base_pct + math.sin(frame * 0.05 + i) * 0.05
+        pct = max(0.1, min(0.95, pct))
+        bar_w = int(110 * pct)
 
-    if t == "sheep":
-        # Fluffy body
-        for dx, dy in [(-4, -3), (4, -3), (-3, 3), (3, 3), (0, -5), (0, 4)]:
-            draw.ellipse([x + dx - 5, y + dy - 4 + bounce, x + dx + 5, y + dy + 4 + bounce], fill=color)
-        # Head
-        draw.ellipse([x - 4, y - 10 + bounce, x + 4, y - 3 + bounce], fill=(200, 200, 200), outline=outline)
-        # Eyes
-        draw.ellipse([x - 2, y - 8 + bounce, x, y - 6 + bounce], fill=(0, 0, 0))
-        draw.ellipse([x + 1, y - 8 + bounce, x + 3, y - 6 + bounce], fill=(0, 0, 0))
+        draw.text((dx + 12, by), team, fill=(100, 120, 140), font=font_small)
+        # Bar background
+        draw.rounded_rectangle([dx + 12, by + 13, dx + 135, by + 21], radius=3, fill=(35, 40, 60))
+        # Bar fill
+        bar_color = (50, 180, 100) if pct < 0.7 else (220, 180, 50) if pct < 0.9 else (220, 80, 80)
+        draw.rounded_rectangle([dx + 12, by + 13, dx + 12 + bar_w, by + 21], radius=3, fill=bar_color)
+        # Percentage
+        draw.text((dx + 138, by + 11), f"{int(pct * 100)}%", fill=(150, 160, 180), font=font_small)
 
-    elif t == "cow":
-        # Body
-        draw.ellipse([x - 12, y - 6 + bounce, x + 12, y + 8 + bounce], fill=color, outline=outline)
-        # Spots
-        draw.ellipse([x - 5, y - 3 + bounce, x + 2, y + 3 + bounce], fill=(240, 240, 240))
-        draw.ellipse([x + 3, y + 1 + bounce, x + 8, y + 5 + bounce], fill=(240, 240, 240))
-        # Head
-        draw.ellipse([x - 14, y - 10 + bounce, x - 6, y - 2 + bounce], fill=color, outline=outline)
-        # Horns
-        draw.line([(x - 12, y - 10 + bounce), (x - 14, y - 14 + bounce)], fill=(200, 180, 100), width=2)
-        draw.line([(x - 8, y - 10 + bounce), (x - 6, y - 14 + bounce)], fill=(200, 180, 100), width=2)
+    # SLO compliance
+    draw.line([(dx + 10, dy + 200), (dx + panel_w - 10, dy + 200)], fill=(50, 60, 90))
+    draw.text((dx + 12, dy + 208), "SLO Compliance", fill=(120, 140, 160), font=font_small)
 
-    elif t == "chicken":
-        # Body
-        draw.ellipse([x - 7, y - 5 + bounce, x + 7, y + 6 + bounce], fill=color, outline=outline)
-        # Head
-        draw.ellipse([x + 5, y - 9 + bounce, x + 12, y - 2 + bounce], fill=color, outline=outline)
-        # Beak
-        draw.polygon([(x + 12, y - 6 + bounce), (x + 16, y - 5 + bounce), (x + 12, y - 4 + bounce)], fill=(255, 100, 0))
-        # Comb
-        draw.polygon([(x + 7, y - 9 + bounce), (x + 8, y - 13 + bounce), (x + 10, y - 9 + bounce)], fill=(255, 0, 0))
-        # Eye
-        draw.ellipse([x + 8, y - 7 + bounce, x + 10, y - 5 + bounce], fill=(0, 0, 0))
-        # Legs
-        draw.line([(x - 2, y + 6 + bounce), (x - 2, y + 10 + bounce)], fill=outline, width=1)
-        draw.line([(x + 2, y + 6 + bounce), (x + 2, y + 10 + bounce)], fill=outline, width=1)
+    # Mini sparkline
+    sparkline_y = dy + 228
+    points = []
+    for i in range(20):
+        sx = dx + 12 + i * 6
+        val = 95 + math.sin((frame + i * 3) * 0.1) * 3
+        sy = sparkline_y + 15 - (val - 90) * 2
+        points.append((sx, sy))
+    if len(points) > 1:
+        draw.line(points, fill=(100, 200, 255), width=2)
 
-    elif t == "pig":
-        # Body
-        draw.ellipse([x - 10, y - 7 + bounce, x + 10, y + 7 + bounce], fill=color, outline=outline)
-        # Head
-        draw.ellipse([x + 8, y - 8 + bounce, x + 18, y + 2 + bounce], fill=color, outline=outline)
-        # Snout
-        draw.ellipse([x + 15, y - 5 + bounce, x + 21, y + 0 + bounce], fill=(255, 150, 150), outline=outline)
-        draw.ellipse([x + 16, y - 3 + bounce, x + 18, y - 1 + bounce], fill=outline)
-        draw.ellipse([x + 19, y - 3 + bounce, x + 21, y - 1 + bounce], fill=outline)
-        # Ear
-        draw.polygon([(x + 10, y - 8 + bounce), (x + 12, y - 13 + bounce), (x + 14, y - 8 + bounce)], fill=color, outline=outline)
-        # Curly tail
-        tail_x = x - 10
-        draw.arc([tail_x - 6, y - 4 + bounce, tail_x, y + 2 + bounce], 0, 270, fill=outline, width=2)
+    # Current value
+    current_slo = 95 + math.sin(frame * 0.1) * 2
+    draw.text((dx + 100, dy + 208), f"{current_slo:.1f}%", fill=(100, 220, 150), font=font_label)
 
-    elif t == "horse":
-        # Body
-        draw.ellipse([x - 12, y - 6 + bounce, x + 12, y + 8 + bounce], fill=color, outline=outline)
-        # Neck + Head
-        draw.polygon([(x - 8, y - 6 + bounce), (x - 12, y - 18 + bounce), (x - 4, y - 18 + bounce), (x - 2, y - 6 + bounce)], fill=color, outline=outline)
-        draw.ellipse([x - 15, y - 22 + bounce, x - 5, y - 15 + bounce], fill=color, outline=outline)
-        # Mane
-        for i in range(4):
-            my = y - 8 - i * 3 + bounce
-            draw.line([(x - 6, my), (x - 2, my - 2)], fill=(60, 30, 10), width=2)
-        # Legs
-        for lx in [x - 7, x - 3, x + 3, x + 7]:
-            draw.line([(lx, y + 8 + bounce), (lx, y + 14 + bounce)], fill=outline, width=2)
-
-    elif t == "duck":
-        # Body
-        draw.ellipse([x - 8, y - 5 + bounce, x + 8, y + 6 + bounce], fill=color, outline=outline)
-        # Head
-        draw.ellipse([x + 6, y - 10 + bounce, x + 14, y - 2 + bounce], fill=color, outline=outline)
-        # Beak
-        draw.polygon([(x + 13, y - 7 + bounce), (x + 19, y - 6 + bounce), (x + 13, y - 4 + bounce)], fill=(255, 150, 0))
-        # Eye
-        draw.ellipse([x + 9, y - 8 + bounce, x + 11, y - 6 + bounce], fill=(0, 0, 0))
-        # Wing
-        draw.ellipse([x - 4, y - 3 + bounce, x + 4, y + 4 + bounce], fill=(230, 230, 170), outline=outline)
+    # Circuit breaker status
+    draw.text((dx + 12, dy + 255), "Circuit Breakers", fill=(120, 140, 160), font=font_small)
+    for i in range(4):
+        cb_x = dx + 100 + i * 12
+        cb_color = (50, 220, 100)  # all closed/green
+        draw.ellipse([cb_x, dy + 256, cb_x + 8, dy + 264], fill=cb_color)
 
 
-def draw_sun(draw, frame):
-    """Draw animated sun."""
-    cx, cy = 560, 35
-    # Rays (rotating)
-    for i in range(8):
-        angle = frame * 0.05 + i * math.pi / 4
-        x1 = cx + math.cos(angle) * 20
-        y1 = cy + math.sin(angle) * 20
-        x2 = cx + math.cos(angle) * 28
-        y2 = cy + math.sin(angle) * 28
-        draw.line([(x1, y1), (x2, y2)], fill=(255, 200, 0), width=2)
-    # Sun body
-    draw.ellipse([cx - 15, cy - 15, cx + 15, cy + 15], fill=(255, 220, 50), outline=(255, 180, 0))
+def draw_tagline(draw, frame):
+    """Draw bottom tagline."""
+    text = "One binary. Fleet control. Zero ops."
+    # Fade in/out subtly
+    alpha = int(180 + math.sin(frame * 0.06) * 40)
+    color = (alpha, alpha, min(255, alpha + 40))
+    draw.text((WIDTH // 2 - 120, HEIGHT - 30), text, fill=color, font=font_tagline)
 
 
-def draw_clouds(draw, frame):
-    """Draw drifting clouds."""
-    for i, (base_x, base_y) in enumerate([(80, 30), (250, 20), (420, 40)]):
-        cx = (base_x + frame * (0.5 + i * 0.2)) % (WIDTH + 60) - 30
-        for dx, dy, r in [(-10, 0, 12), (0, -5, 15), (10, 0, 12), (5, 5, 10)]:
-            draw.ellipse([cx + dx - r, base_y + dy - r, cx + dx + r, base_y + dy + r], fill=(255, 255, 255))
-
-
-def bounce_animal(animal):
-    """Bounce animal off pasture walls."""
-    margin = 20
-    if animal["x"] <= PASTURE_LEFT + margin or animal["x"] >= PASTURE_RIGHT - margin:
-        animal["dx"] *= -1
-        animal["x"] = max(PASTURE_LEFT + margin, min(PASTURE_RIGHT - margin, animal["x"]))
-    if animal["y"] <= PASTURE_TOP + margin or animal["y"] >= PASTURE_BOTTOM - margin:
-        animal["dy"] *= -1
-        animal["y"] = max(PASTURE_TOP + margin, min(PASTURE_BOTTOM - margin, animal["y"]))
-
-
-def draw_title(draw, frame):
-    """Draw title with subtle pulse."""
-    pulse = 0.9 + math.sin(frame * 0.1) * 0.1
-    c = int(40 * pulse)
-    draw.text((WIDTH // 2 - 70, HEIGHT - 25), "AgentPlane Fleet", fill=(c, c, c), font=font_title)
-
-
-def draw_status_indicators(draw, frame):
-    """Draw small status LEDs near the farm and factory."""
-    # Farm status (green blinking)
-    if frame % 20 < 15:
-        draw.ellipse([125, 82, 133, 90], fill=(0, 220, 0))
-    else:
-        draw.ellipse([125, 82, 133, 90], fill=(0, 100, 0))
-
-    # Factory status
-    if frame % 30 < 25:
-        draw.ellipse([475, 72, 483, 80], fill=(0, 150, 255))
-    else:
-        draw.ellipse([475, 72, 483, 80], fill=(0, 60, 120))
+def draw_title(draw):
+    """Draw top title."""
+    draw.text((20, 12), "AgentPlane", fill=(200, 220, 255), font=font_title)
+    draw.text((155, 18), "control plane for AI agents", fill=(100, 120, 150), font=font_small)
 
 
 def generate_gif(output_path):
@@ -298,39 +221,24 @@ def generate_gif(output_path):
         img = Image.new("RGB", (WIDTH, HEIGHT), BG_COLOR)
         draw = ImageDraw.Draw(img)
 
-        draw_sky_and_ground(draw)
-        draw_clouds(draw, frame_idx)
-        draw_sun(draw, frame_idx)
+        draw_starfield(draw, frame_idx)
+        draw_orbit_rings(draw)
+        draw_control_tower(draw, frame_idx)
 
-        # Pasture grass (lighter area)
-        draw.rectangle([PASTURE_LEFT + 5, PASTURE_TOP + 5, PASTURE_RIGHT - 5, PASTURE_BOTTOM - 5],
-                       fill=(130, 200, 80))
+        for agent in AGENTS:
+            draw_agent_node(draw, agent, frame_idx)
 
-        draw_paths(draw, frame_idx)
-        draw_farm(draw, frame_idx)
-        draw_factory(draw, frame_idx)
-        draw_fence(draw)
-        draw_status_indicators(draw, frame_idx)
-
-        # Update and draw animals
-        for animal in ANIMALS:
-            wobble_x = math.sin(frame_idx * 0.2 + hash(animal["type"])) * 0.3
-            wobble_y = math.cos(frame_idx * 0.25 + hash(animal["type"])) * 0.3
-            animal["x"] += animal["dx"] + wobble_x
-            animal["y"] += animal["dy"] + wobble_y
-            bounce_animal(animal)
-            draw_animal(draw, animal, frame_idx)
-
-        draw_title(draw, frame_idx)
+        draw_mini_dashboard(draw, frame_idx)
+        draw_title(draw)
+        draw_tagline(draw, frame_idx)
 
         frames.append(img)
 
-    # Save as GIF
     frames[0].save(
         output_path,
         save_all=True,
         append_images=frames[1:],
-        duration=80,  # 80ms per frame ≈ 12.5fps
+        duration=70,  # ~14fps
         loop=0,
         optimize=True,
     )
