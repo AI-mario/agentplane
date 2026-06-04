@@ -8,6 +8,7 @@
 - [Deployment Options](#deployment-options)
 - [Post-Installation Verification](#post-installation-verification)
 - [Agent Configuration Guide](#agent-configuration-guide)
+- [Gemini Enterprise Integration (Step-by-Step)](#gemini-enterprise-integration-step-by-step)
 - [Troubleshooting](#troubleshooting)
 
 ---
@@ -733,6 +734,345 @@ apctl mission status <mission-id>
 curl -s "http://localhost:8080/api/v1/costs?teamId=platform&startTime=2025-01-01" \
   -H "Authorization: Bearer $AGENTPLANE_TOKEN" | jq .
 ```
+
+---
+
+## Gemini Enterprise Integration (Step-by-Step)
+
+This guide walks through integrating Google Gemini Enterprise agents with AgentPlane, from GCP setup through mission dispatch.
+
+### Prerequisites for Gemini
+
+- A Google Cloud Platform account with billing enabled
+- A GCP project with the Vertex AI API or Generative Language API enabled
+- AgentPlane running (any deployment option)
+
+### Step 1: Choose Authentication Mode
+
+AgentPlane supports two authentication modes for Gemini:
+
+| Mode | Best for | Setup complexity |
+|------|----------|-----------------|
+| **API Key** | Development, prototyping | Low |
+| **Service Account (Vertex AI)** | Production, enterprise | Medium |
+
+#### Option A: API Key (Simple)
+
+1. Go to [Google AI Studio](https://aistudio.google.com/apikey)
+2. Click "Create API Key"
+3. Select your GCP project
+4. Copy the generated key (starts with `AIza...`)
+
+#### Option B: Service Account (Production)
+
+```bash
+# 1. Create a service account
+gcloud iam service-accounts create agentplane-gemini \
+  --display-name="AgentPlane Gemini Adapter" \
+  --project=YOUR_PROJECT_ID
+
+# 2. Grant Vertex AI User role
+gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
+  --member="serviceAccount:agentplane-gemini@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+  --role="roles/aiplatform.user"
+
+# 3. Create and download key file
+gcloud iam service-accounts keys create gemini-sa-key.json \
+  --iam-account=agentplane-gemini@YOUR_PROJECT_ID.iam.gserviceaccount.com
+
+# 4. Store the key securely
+sudo mkdir -p /etc/agentplane/secrets
+sudo mv gemini-sa-key.json /etc/agentplane/secrets/
+sudo chmod 600 /etc/agentplane/secrets/gemini-sa-key.json
+```
+
+### Step 2: Enable the API
+
+```bash
+# For Vertex AI (recommended for enterprise)
+gcloud services enable aiplatform.googleapis.com --project=YOUR_PROJECT_ID
+
+# OR for Generative Language API (simpler, API key mode)
+gcloud services enable generativelanguage.googleapis.com --project=YOUR_PROJECT_ID
+```
+
+### Step 3: Configure AgentPlane
+
+#### Option A: Environment Variables
+
+```bash
+# --- API Key mode ---
+export AGENTPLANE_GEMINI_API_KEY="AIzaSy..."
+export AGENTPLANE_GEMINI_MODEL="gemini-2.5-pro"   # optional, defaults to gemini-2.5-pro
+
+# --- OR Vertex AI mode ---
+export AGENTPLANE_GEMINI_PROJECT_ID="my-gcp-project"
+export AGENTPLANE_GEMINI_LOCATION="us-central1"
+export AGENTPLANE_GEMINI_MODEL="gemini-2.5-pro"
+export AGENTPLANE_GEMINI_SERVICE_ACCOUNT_JSON="/etc/agentplane/secrets/gemini-sa-key.json"
+```
+
+#### Option B: YAML Configuration
+
+Add to your `config.yaml`:
+
+```yaml
+# API Key mode
+geminiApiKey: "AIzaSy..."
+geminiModel: "gemini-2.5-pro"
+
+# OR Vertex AI mode
+geminiProjectId: "my-gcp-project"
+geminiLocation: "us-central1"
+geminiModel: "gemini-2.5-pro"
+geminiServiceAccountJson: "/etc/agentplane/secrets/gemini-sa-key.json"
+```
+
+### Step 4: Start AgentPlane
+
+```bash
+# Verify Gemini adapter activates on startup
+agentplane --config config.yaml
+
+# Look for this log line:
+# dispatch: gemini adapter enabled (model=gemini-2.5-pro)
+```
+
+### Step 5: Register a Gemini Agent
+
+Create `agents/gemini-analyst.yaml`:
+
+```yaml
+apiVersion: agentplane.io/v1
+kind: Agent
+metadata:
+  name: gemini-analyst
+  namespace: data-team
+  version: "1.0.0"
+  labels:
+    team: data-engineering
+    provider: google
+    model: gemini-2.5-pro
+    tier: enterprise
+spec:
+  runtime: gemini
+  capabilities:
+    - name: data-analysis
+      type: mcp-tool
+    - name: document-summarization
+      type: mcp-tool
+    - name: code-generation
+      type: mcp-tool
+    - name: multi-modal-reasoning
+      type: a2a-message
+  slo:
+    latency: 20000        # 20s max (Gemini can be slow for complex tasks)
+    accuracy: 93.0        # 93% accuracy target
+    cost: 0.10            # $0.10 per invocation budget
+  resources:
+    maxConcurrentMissions: 8
+    maxMemoryMB: 2048
+  deployment:
+    strategy: canary
+    canaryPercent: 10
+    maxInstances: 5
+    drainTimeout: 120s
+```
+
+Apply it:
+
+```bash
+apctl agent apply -f agents/gemini-analyst.yaml
+
+# Verify registration
+apctl agent describe gemini-analyst
+```
+
+### Step 6: Submit a Mission to Gemini
+
+```bash
+cat > /tmp/gemini-mission.json << 'EOF'
+{
+  "requiredCapabilities": ["data-analysis"],
+  "priority": 1,
+  "teamId": "data-engineering",
+  "projectId": "quarterly-report",
+  "payload": {
+    "goal": "Analyze Q4 sales data and identify top 3 growth opportunities",
+    "context": {
+      "data_source": "sales_db",
+      "time_range": "2025-10-01 to 2025-12-31",
+      "format": "executive summary with bullet points"
+    }
+  },
+  "timeout": "120s"
+}
+EOF
+
+apctl mission submit -f /tmp/gemini-mission.json
+```
+
+### Step 7: Verify Execution
+
+```bash
+# Check mission was assigned to the Gemini agent
+apctl mission status <mission-id> --output json
+
+# Expected output includes:
+# {
+#   "agentId": "...",
+#   "agentRuntime": "gemini",
+#   "status": "completed",
+#   "tokensUsed": 1420,
+#   "latencyMs": 8500
+# }
+
+# Check cost was recorded
+apctl fleet status
+```
+
+### Step 8: Set Budget Policies for Gemini
+
+Gemini Enterprise can be expensive. Set budget controls:
+
+```yaml
+apiVersion: agentplane.io/v1
+kind: Policy
+metadata:
+  name: gemini-budget-policy
+  scope: team
+  teamId: data-engineering
+spec:
+  rules:
+    - id: gemini-cost-cap
+      type: budget
+      condition: "request.estimatedCost <= 50.00"
+      effect: allow
+    - id: gemini-runtime-only
+      type: runtime
+      condition: "agent.runtime == 'gemini'"
+      effect: allow
+```
+
+```bash
+apctl policy apply -f policies/gemini-budget-policy.yaml
+```
+
+### Available Gemini Models
+
+| Model | Use Case | Speed | Cost |
+|-------|----------|-------|------|
+| `gemini-2.5-pro` | Complex reasoning, code, analysis | Medium | Higher |
+| `gemini-2.5-flash` | Fast responses, simple tasks | Fast | Lower |
+| `gemini-2.0-flash` | Legacy, stable | Fast | Lower |
+
+Change model via:
+```bash
+export AGENTPLANE_GEMINI_MODEL="gemini-2.5-flash"
+```
+
+### Multi-Agent Orchestration with Gemini
+
+Register multiple specialized Gemini agents:
+
+```bash
+# Agent 1: Fast, cheap (flash model for simple tasks)
+cat > agents/gemini-fast.yaml << 'EOF'
+apiVersion: agentplane.io/v1
+kind: Agent
+metadata:
+  name: gemini-fast-responder
+  namespace: support
+  version: "1.0.0"
+  labels:
+    model: gemini-2.5-flash
+    tier: standard
+spec:
+  runtime: gemini
+  capabilities:
+    - name: quick-answer
+      type: mcp-tool
+    - name: classification
+      type: mcp-tool
+  slo:
+    latency: 3000
+    accuracy: 85.0
+    cost: 0.02
+  resources:
+    maxConcurrentMissions: 20
+    maxMemoryMB: 512
+  deployment:
+    strategy: immediate
+    maxInstances: 10
+    drainTimeout: 30s
+EOF
+
+# Agent 2: Powerful, expensive (pro model for complex analysis)
+cat > agents/gemini-deep.yaml << 'EOF'
+apiVersion: agentplane.io/v1
+kind: Agent
+metadata:
+  name: gemini-deep-analyst
+  namespace: research
+  version: "1.0.0"
+  labels:
+    model: gemini-2.5-pro
+    tier: premium
+spec:
+  runtime: gemini
+  capabilities:
+    - name: deep-research
+      type: mcp-tool
+    - name: multi-document-synthesis
+      type: mcp-tool
+    - name: code-audit
+      type: mcp-tool
+  slo:
+    latency: 60000
+    accuracy: 96.0
+    cost: 0.50
+  resources:
+    maxConcurrentMissions: 3
+    maxMemoryMB: 4096
+  deployment:
+    strategy: canary
+    canaryPercent: 5
+    maxInstances: 2
+    drainTimeout: 300s
+EOF
+
+apctl agent apply -f agents/gemini-fast.yaml
+apctl agent apply -f agents/gemini-deep.yaml
+```
+
+The Scheduler automatically routes missions to the right Gemini agent based on required capabilities and weighted scoring.
+
+### Monitoring Gemini Usage
+
+```bash
+# Real-time fleet status (shows Gemini agents + SLO compliance)
+apctl fleet status
+
+# Cost breakdown by agent
+curl -s "http://localhost:8080/api/v1/costs?agentId=gemini-analyst" \
+  -H "Authorization: Bearer $AGENTPLANE_TOKEN" | jq .
+
+# Dashboard view
+open http://localhost:8080
+# → Cost Attribution panel shows Gemini spending per team/project
+```
+
+### Troubleshooting Gemini
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| `dispatch: gemini adapter enabled` not in logs | Missing config | Set `AGENTPLANE_GEMINI_API_KEY` or Vertex AI vars |
+| `gemini API error 401` | Invalid API key | Regenerate key at [AI Studio](https://aistudio.google.com/apikey) |
+| `gemini API error 403` | API not enabled | Run `gcloud services enable generativelanguage.googleapis.com` |
+| `gemini API error 429` | Rate limited | Adapter retries automatically (3x with backoff). Reduce `maxConcurrentMissions` |
+| `gemini API error 500/503` | Transient server error | Automatic retry. Circuit breaker opens if persistent |
+| Circuit breaker opens | >50% error rate over 5 min | Check GCP quota, API status. Breaker auto-recovers after cooldown |
+| High costs | Unexpected token usage | Set budget policy, reduce `maxConcurrentMissions`, use `gemini-2.5-flash` |
 
 ---
 
